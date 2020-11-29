@@ -105,7 +105,7 @@ public class SkeletonRenderer {
 				BlendMode slotBlendMode = slot.data.getBlendMode();
 				if (slotBlendMode != blendMode) {
 					blendMode = slotBlendMode;
-					batch.setBlendFunction(blendMode.getSource(premultipliedAlpha), blendMode.getDest());
+					batch.setBlendFunctionSeparate(blendMode.getSource(premultipliedAlpha), blendMode.getDest(), blendMode.getSourceAlpha(premultipliedAlpha), blendMode.getDestAlpha());
 				}
 				batch.draw(texture, vertices, 0, vertices.length, triangles, 0, triangles.length);
 			}
@@ -127,7 +127,7 @@ public class SkeletonRenderer {
 				BlendMode slotBlendMode = slot.data.getBlendMode();
 				if (slotBlendMode != blendMode) {
 					blendMode = slotBlendMode;
-					batch.setBlendFunction(blendMode.getSource(premultipliedAlpha), blendMode.getDest());
+					batch.setBlendFunctionSeparate(blendMode.getSource(premultipliedAlpha), blendMode.getDest(), blendMode.getSourceAlpha(premultipliedAlpha), blendMode.getDestAlpha());
 				}
 				batch.draw(regionAttachment.getRegion().getTexture(), vertices, 0, 20);
 

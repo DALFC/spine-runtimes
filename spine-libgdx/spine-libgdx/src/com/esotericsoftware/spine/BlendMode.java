@@ -34,18 +34,20 @@ package com.esotericsoftware.spine;
 import com.badlogic.gdx.graphics.GL20;
 
 public enum BlendMode {
-	normal(GL20.GL_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_ALPHA), //
-	additive(GL20.GL_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ONE), //
-	multiply(GL20.GL_DST_COLOR, GL20.GL_DST_COLOR, GL20.GL_ONE_MINUS_SRC_ALPHA), //
-	screen(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_COLOR), //
+	normal	(GL20.GL_SRC_ALPHA, GL20.GL_ONE      , GL20.GL_ONE_MINUS_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ONE), //
+	additive(GL20.GL_SRC_ALPHA, GL20.GL_ONE      , GL20.GL_ONE				  , GL20.GL_ONE, GL20.GL_ONE), //
+	multiply(GL20.GL_DST_COLOR, GL20.GL_DST_COLOR, GL20.GL_ONE_MINUS_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ONE), //
+	screen  (GL20.GL_ONE      , GL20.GL_ONE      , GL20.GL_ONE_MINUS_SRC_COLOR, GL20.GL_ONE, GL20.GL_ONE), //
 	;
 
-	int source, sourcePMA, dest;
+	int source, sourcePMA, dest, sourceAlpha, destAlpha;
 
-	BlendMode (int source, int sourcePremultipledAlpha, int dest) {
+	BlendMode (int source, int sourcePremultipledAlpha, int dest, int sourceAlpha, int destAlpha) {
 		this.source = source;
 		this.sourcePMA = sourcePremultipledAlpha;
 		this.dest = dest;
+		this.sourceAlpha = sourceAlpha;
+		this.destAlpha = destAlpha;
 	}
 
 	public int getSource (boolean premultipliedAlpha) {
@@ -54,6 +56,14 @@ public enum BlendMode {
 
 	public int getDest () {
 		return dest;
+	}
+
+	public int getSourceAlpha (boolean premultipliedAlpha) {
+		return sourceAlpha;
+	}
+	
+	public int getDestAlpha () {
+		return destAlpha;
 	}
 
 	static public BlendMode[] values = values();

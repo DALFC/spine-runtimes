@@ -162,7 +162,11 @@ public class SkeletonJson {
 			if (color != null) slotData.getColor().set(Color.valueOf(color));
 
 			slotData.attachmentName = slotMap.getString("attachment", null);
-			slotData.blendMode = BlendMode.valueOf(slotMap.getString("blend", BlendMode.normal.name()));
+			if (slotMap.getBoolean("additive", false)) //if there's a additive : true slot for 2.1.25 files
+			{
+				slotData.blendMode = BlendMode.valueOf("additive");
+			}
+			else slotData.blendMode = BlendMode.valueOf(slotMap.getString("blend", BlendMode.normal.name()));
 			skeletonData.slots.add(slotData);
 		}
 

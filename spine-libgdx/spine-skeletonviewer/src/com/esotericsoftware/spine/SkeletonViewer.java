@@ -92,6 +92,8 @@ public class SkeletonViewer extends ApplicationAdapter {
 	FileHandle skeletonFile;
 	long lastModified;
 	float lastModifiedCheck, reloadTimer;
+	boolean dragging;
+	int scrPosX, scrPosY;
 
 	public void create () {
 		ui = new UI();
@@ -269,7 +271,7 @@ public class SkeletonViewer extends ApplicationAdapter {
 		CheckBox loopCheckbox = new CheckBox(" Loop", skin);
 		CheckBox premultipliedCheckbox = new CheckBox(" Premultiplied", skin);
 		Slider mixSlider = new Slider(0f, 2, 0.01f, false, skin);
-		Label mixLabel = new Label("0.3", skin);
+		Label mixLabel = new Label("0.0", skin);
 		Slider speedSlider = new Slider(0.1f, 3, 0.01f, false, skin);
 		Label speedLabel = new Label("1.0", skin);
 		CheckBox flipXCheckbox = new CheckBox(" X", skin);
@@ -291,14 +293,14 @@ public class SkeletonViewer extends ApplicationAdapter {
 		public UI () {
 			// Configure widgets.
 
-			premultipliedCheckbox.setChecked(true);
+			premultipliedCheckbox.setChecked(false);
 
 			loopCheckbox.setChecked(true);
 
 			scaleSlider.setValue(1);
 			scaleSlider.setSnapToValues(new float[] {1}, 0.1f);
 
-			mixSlider.setValue(0.3f);
+			mixSlider.setValue(0);
 
 			speedSlider.setValue(1);
 			speedSlider.setSnapToValues(new float[] {1}, 0.1f);
@@ -474,13 +476,24 @@ public class SkeletonViewer extends ApplicationAdapter {
 
 			Gdx.input.setInputProcessor(new InputMultiplexer(stage, new InputAdapter() {
 				public boolean touchDown (int screenX, int screenY, int pointer, int button) {
-					touchDragged(screenX, screenY, pointer);
+					scrPosX = screenX;
+        			scrPosY = screenY;
+        			dragging = true;
 					return false;
 				}
 
+				public boolean touchUp (int screenX, int screenY, int pointer, int button) {
+			    	dragging = false;
+			        return false;
+			    }
+
 				public boolean touchDragged (int screenX, int screenY, int pointer) {
-					skeletonX = screenX;
-					skeletonY = Gdx.graphics.getHeight() - screenY;
+					if (dragging) {
+			        	skeletonX += (screenX - scrPosX);
+			        	skeletonY -= (screenY - scrPosY);
+			        	scrPosX = screenX;
+			        	scrPosY = screenY;
+			        }
 					return false;
 				}
 			}));

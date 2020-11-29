@@ -161,7 +161,16 @@ public class SkeletonBinary {
 				SlotData slotData = new SlotData(slotName, boneData);
 				Color.rgba8888ToColor(slotData.color, input.readInt());
 				slotData.attachmentName = input.readString();
-				slotData.blendMode = BlendMode.values[input.readInt(true)];
+				input.mark(-1);
+				if (input.readBoolean()) //2.1.25 files
+				{
+					slotData.blendMode = BlendMode.valueOf("additive");
+				}
+				else 
+				{
+					input.reset();
+					slotData.blendMode = BlendMode.values[input.readInt(true)];
+				}
 				skeletonData.slots.add(slotData);
 			}
 

@@ -39,6 +39,7 @@ public class SlotData {
 	final Color color = new Color(1, 1, 1, 1);
 	String attachmentName;
 	BlendMode blendMode;
+	boolean additiveBlending;
 
 	SlotData () {
 		name = null;
@@ -81,6 +82,7 @@ public class SlotData {
 	public void setBlendMode (BlendMode blendMode) {
 		this.blendMode = blendMode;
 	}
+	
 
 	public String toString () {
 		return name;
