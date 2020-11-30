@@ -48,6 +48,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.Pixmap.Format;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
@@ -73,8 +74,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.BufferUtils;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.spine.AnimationState.TrackEntry;
+import com.esotericsoftware.spine.AnimationState.AnimationStateListener;
 
 public class SkeletonViewer extends ApplicationAdapter {
 	static final float checkModifiedInterval = 0.250f;
@@ -94,15 +98,43 @@ public class SkeletonViewer extends ApplicationAdapter {
 	float lastModifiedCheck, reloadTimer;
 	boolean dragging;
 	int scrPosX, scrPosY;
+	int counter;
+	boolean capturing, screenshotting;
+	String filename;
+	AnimationStateListener listener;
 
 	public void create () {
+		listener = new AnimationStateListener() {
+			@Override
+			public void event (int trackIndex, Event event)
+			{}
+
+			@Override
+			public void complete (int trackIndex, int loopCount)
+			{
+				if (capturing)
+				{	
+					capturing = false;
+					state.setAnimation(0, ui.animationList.getSelected(), ui.loopCheckbox.isChecked());
+				}
+			}
+
+			@Override
+			public void start (int trackIndex)
+			{
+			}
+			@Override
+			public void end (int trackIndex)
+			{
+			}
+		};
 		ui = new UI();
 		batch = new PolygonSpriteBatch();
 		renderer = new SkeletonRenderer();
 		debugRenderer = new SkeletonRendererDebug();
 		skeletonX = (int)(ui.window.getWidth() + (Gdx.graphics.getWidth() - ui.window.getWidth()) / 2);
 		skeletonY = Gdx.graphics.getHeight() / 4;
-
+		counter = 1;
 		loadSkeleton(
 			Gdx.files.internal(Gdx.app.getPreferences("spine-skeletontest").getString("lastFile", "spineboy/spineboy.json")), false);
 	}
@@ -116,7 +148,7 @@ public class SkeletonViewer extends ApplicationAdapter {
 		pixmap.fill();
 		final AtlasRegion fake = new AtlasRegion(new Texture(pixmap), 0, 0, 32, 32);
 		pixmap.dispose();
-
+		filename = skeletonFile.nameWithoutExtension();
 		String atlasFileName = skeletonFile.nameWithoutExtension();
 		if (atlasFileName.endsWith(".json")) atlasFileName = new FileHandle(atlasFileName).nameWithoutExtension();
 		FileHandle atlasFile = skeletonFile.sibling(atlasFileName + ".atlas");
@@ -184,7 +216,23 @@ public class SkeletonViewer extends ApplicationAdapter {
 
 		if (reload) ui.toast("Reloaded.");
 	}
-
+	public void screenshot (String filepath)
+	{
+		byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(), true);
+		Pixmap pixmap = new Pixmap(Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(), Pixmap.Format.RGBA8888);
+		BufferUtils.copy(pixels, 0, pixmap.getPixels(), pixels.length);
+		PixmapIO.writePNG(Gdx.files.local(filepath), pixmap);
+		pixmap.dispose();
+	}
+	public void capture ()
+	{
+		state.setAnimation(0, ui.animationList.getSelected(), false);
+		capturing = true;
+	}
+	public void capturePNG ()
+	{
+		screenshotting = true;
+	}
 	public void render () {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -232,13 +280,14 @@ public class SkeletonViewer extends ApplicationAdapter {
 		}
 
 		ui.stage.act();
-		ui.stage.draw();
+		if (!capturing && !screenshotting)	ui.stage.draw();
 
 		// Draw indicator for timeline position.
 		if (state != null) {
 			ShapeRenderer shapes = debugRenderer.getShapeRenderer();
 			TrackEntry entry = state.getCurrent(0);
-			if (entry != null) {
+			entry.setListener(listener);
+			if (entry != null && !capturing) {
 				float percent = entry.getTime() / entry.getEndTime();
 				if (entry.getLoop()) percent %= 1;
 				float x = ui.window.getRight() + (Gdx.graphics.getWidth() - ui.window.getRight()) * percent;
@@ -248,6 +297,17 @@ public class SkeletonViewer extends ApplicationAdapter {
 				shapes.end();
 			}
 		}
+		if (capturing)
+		{
+			screenshot("out/" + filename + "/" + filename + "_" + counter + ".png"); //Take screenshot of frame
+			counter++; //increase counter
+		}
+		if (screenshotting)
+		{
+			screenshot("out/" + filename + ".png");
+			screenshotting = false;
+		}
+
 	}
 
 	public void resize (int width, int height) {
@@ -284,6 +344,8 @@ public class SkeletonViewer extends ApplicationAdapter {
 		Slider scaleSlider = new Slider(0.1f, 3, 0.01f, false, skin);
 		Label scaleLabel = new Label("1.0", skin);
 		TextButton pauseButton = new TextButton("Pause", skin, "toggle");
+		TextButton screenshotButton = new TextButton("PNG", skin);
+		TextButton captureButton = new TextButton("Sequence", skin);
 		TextButton minimizeButton = new TextButton("-", skin);
 		TextButton bonesSetupPoseButton = new TextButton("Bones", skin);
 		TextButton slotsSetupPoseButton = new TextButton("Slots", skin);
@@ -368,7 +430,8 @@ public class SkeletonViewer extends ApplicationAdapter {
 			}
 			root.add("Playback:");
 			root.add(table(pauseButton, loopCheckbox)).row();
-
+			root.add("Export:");
+			root.add(table(screenshotButton, captureButton)).row();
 			window.add(root).expand().fill();
 			window.pack();
 			stage.addActor(window);
@@ -417,6 +480,18 @@ public class SkeletonViewer extends ApplicationAdapter {
 			slotsSetupPoseButton.addListener(new ChangeListener() {
 				public void changed (ChangeEvent event, Actor actor) {
 					if (skeleton != null) skeleton.setSlotsToSetupPose();
+				}
+			});
+
+			screenshotButton.addListener(new ChangeListener() {
+				public void changed (ChangeEvent event, Actor actor) {
+					if (skeleton != null) capturePNG();
+				}
+			});
+
+			captureButton.addListener(new ChangeListener() {
+				public void changed (ChangeEvent event, Actor actor) {
+					if (skeleton != null) capture();
 				}
 			});
 
@@ -476,6 +551,11 @@ public class SkeletonViewer extends ApplicationAdapter {
 
 			Gdx.input.setInputProcessor(new InputMultiplexer(stage, new InputAdapter() {
 				public boolean touchDown (int screenX, int screenY, int pointer, int button) {
+					if (capturing)
+					{	
+						capturing = false;
+						state.setAnimation(0, ui.animationList.getSelected(), ui.loopCheckbox.isChecked());
+					}
 					scrPosX = screenX;
         			scrPosY = screenY;
         			dragging = true;

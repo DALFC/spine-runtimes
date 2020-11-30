@@ -32,6 +32,9 @@
 package com.esotericsoftware.spine;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -161,15 +164,45 @@ public class SkeletonBinary {
 				SlotData slotData = new SlotData(slotName, boneData);
 				Color.rgba8888ToColor(slotData.color, input.readInt());
 				slotData.attachmentName = input.readString();
-				input.mark(-1);
-				if (input.readBoolean()) //2.1.25 files
+				if (input.markSupported()) //If input's mark() and reset() methods are supported
 				{
-					slotData.blendMode = BlendMode.valueOf("additive");
+					input.mark(-1);
+					if (input.readBoolean()) //2.1.25 files
+					{
+						slotData.blendMode = BlendMode.valueOf("additive");
+					}
+					else 
+					{
+						input.reset();
+						slotData.blendMode = BlendMode.values[input.readInt(true)];
+					}
 				}
-				else 
+				else
 				{
-					input.reset();
-					slotData.blendMode = BlendMode.values[input.readInt(true)];
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+					byte[] buffer = new byte[1024];
+					int len;
+					while ((len = input.read(buffer)) > -1) {
+					    baos.write(buffer, 0, len);
+					}
+					baos.flush();
+					InputStream is1 = new ByteArrayInputStream(baos.toByteArray()); 
+					InputStream is2 = new ByteArrayInputStream(baos.toByteArray()); 
+
+					input = new DataInput(is1); //Restore the current input stream
+					DataInput inputsafe = new DataInput(is2); //New input stream independent of the current one
+
+					if (inputsafe.readBoolean()) //2.1.25 files
+					{
+						slotData.blendMode = BlendMode.valueOf("additive");
+						inputsafe.close(); //Release memory
+						input.readBoolean(); //Move the input stream to the next bytes
+					}
+					else //2.1.27 files
+					{
+						slotData.blendMode = BlendMode.values[input.readInt(true)];
+					}
 				}
 				skeletonData.slots.add(slotData);
 			}
